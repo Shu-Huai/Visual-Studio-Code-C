@@ -5,7 +5,7 @@
     "editor.acceptSuggestionOnEnter": "off",
     "code-runner.runInTerminal": true,
     "code-runner.executorMap": {
-        "c": "gcc '$fileName' -o '$fileNameWithoutExt.exe' -Wall -g -O2 -m64 -lm -static-libgcc -std-c11 -fexec-charset=GBK -D__USE_MINGW_ANSI_STDIO && &'./$fileNameWithoutExt.exe'",
+        "c": "gcc '$fileName' -o '$fileNameWithoutExt.exe' -Wall -g -O2 -m64 -lm -static-libgcc -std=c17 -fexec-charset=GBK -D__USE_MINGW_ANSI_STDIO && &'./$fileNameWithoutExt.exe'",
     },
     "code-runner.saveFileBeforeRun": true,
     "code-runner.preserveFocus": true,

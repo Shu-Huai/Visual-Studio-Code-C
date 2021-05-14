@@ -9,7 +9,7 @@
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}.exe",
                 "-g",
-                "-std=c11",
+                "-std=c17",
                 "-m64",
                 "-Wall",
                 "-static-libgcc",

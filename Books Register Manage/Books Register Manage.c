@@ -35,7 +35,7 @@ void InsertBook(Book *books, char *name, char *author, char *publisher, char *IS
 }
 void ReadFromFile(Book *books, char *path)
 {
-    FILE *file = fopen(path, "r");
+    FILE *file = fopen(path, "r+");
     if (!file)
     {
         printf("文件不存在。\n");
@@ -67,12 +67,12 @@ char *DeleteBook(Book *books, char *ISBN)
     }
     if (!p)
     {
-        return "查无此书。";
+        return "查无此书";
     }
     Book *q = p->next_;
     p->next_ = q->next_;
     free(q);
-    return "成功。";
+    return "成功";
 }
 char *SetBookName(Book *books, char *ISBN, char *name)
 {
@@ -83,10 +83,10 @@ char *SetBookName(Book *books, char *ISBN, char *name)
     }
     if (!p)
     {
-        return "查无此书。";
+        return "查无此书";
     }
     strcpy(p->name_, name);
-    return "成功。";
+    return "成功";
 }
 char *SetBookAuthor(Book *books, char *ISBN, char *author)
 {
@@ -97,10 +97,10 @@ char *SetBookAuthor(Book *books, char *ISBN, char *author)
     }
     if (!p)
     {
-        return "查无此书。";
+        return "查无此书";
     }
     strcpy(p->author_, author);
-    return "成功。";
+    return "成功";
 }
 char *SetBookPublisher(Book *books, char *ISBN, char *publisher)
 {
@@ -111,10 +111,10 @@ char *SetBookPublisher(Book *books, char *ISBN, char *publisher)
     }
     if (!p)
     {
-        return "查无此书。";
+        return "查无此书";
     }
     strcpy(p->publisher_, publisher);
-    return "成功。";
+    return "成功";
 }
 char *GetBookName(Book *books, char *ISBN)
 {
@@ -143,21 +143,36 @@ char *GetBookPublisher(Book *books, char *ISBN)
     }
     return p ? p->publisher_ : "查无此书";
 }
+void SaveToFile(Book *books, char *path)
+{
+    FILE *file = fopen(path, "w+");
+    Book *p = books->next_;
+    while (p)
+    {
+        fprintf(file, "%s %s %s %s", p->name_, p->author_, p->publisher_, p->ISBN_);
+        if (p->next_)
+        {
+            fprintf(file, "\n");
+        }
+        p = p->next_;
+    }
+    fclose(file);
+}
 int main()
 {
     Book *books = NULL;
     books = InitializeBooks(books);
-    ReadFromFile(books, "Books.txt");
+    ReadFromFile(books, "Books Register Manage/Books.txt");
     char functionSelect = 0;
-    char bookName[100] = {0};
-    char bookAuthor[100] = {0};
-    char bookPublisher[100] = {0};
-    char bookISBN[14] = {0};
     while (functionSelect != '0')
     {
-        printf("1. 录入图书信息。\n2. 显示图书名字。\n3. 显示图书作者。\n4. 显示图书出版社。\n5. 修改图书名字。\n6. 修改图书作者。\n7. 修改图书出版社。\n8. 删除图书。\n0. 保存并退出。");
+        printf("1. 录入图书信息。\n2. 显示图书名字。\n3. 显示图书作者。\n4. 显示图书出版社。\n5. 修改图书名字。\n6. 修改图书作者。\n7. 修改图书出版社。\n8. 删除图书。\n0. 保存并退出。\n");
         printf("选择功能（0~8）：");
         scanf("%c", &functionSelect);
+        char bookName[100] = {0};
+        char bookAuthor[100] = {0};
+        char bookPublisher[100] = {0};
+        char bookISBN[14] = {0};
         switch (functionSelect)
         {
         case '1':
@@ -171,20 +186,58 @@ int main()
             scanf("%s", bookISBN);
             InsertBook(books, bookName, bookAuthor, bookPublisher, bookISBN);
             printf("成功。\n");
+            getchar();
             break;
         case '2':
             printf("输入图书编号：");
             scanf("%s", bookISBN);
             printf("图书名字是：%s。\n", GetBookName(books, bookISBN));
+            getchar();
+            break;
         case '3':
             printf("输入图书编号：");
             scanf("%s", bookISBN);
             printf("图书作者是：%s。\n", GetBookAuthor(books, bookISBN));
+            getchar();
+            break;
         case '4':
             printf("输入图书编号：");
             scanf("%s", bookISBN);
             printf("图书出版社是：%s。\n", GetBookPublisher(books, bookISBN));
+            getchar();
+            break;
+        case '5':
+            printf("输入图书编号：");
+            scanf("%s", bookISBN);
+            printf("输入图书名字：");
+            scanf("%s", bookName);
+            printf("%s。\n", SetBookName(books, bookISBN, bookName));
+            getchar();
+            break;
+        case '6':
+            printf("输入图书编号：");
+            scanf("%s", bookISBN);
+            printf("输入图书作者：");
+            scanf("%s", bookAuthor);
+            printf("%s。\n", SetBookAuthor(books, bookISBN, bookAuthor));
+            getchar();
+            break;
+        case '7':
+            printf("输入图书编号：");
+            scanf("%s", bookISBN);
+            printf("输入图书出版社：");
+            scanf("%s", bookPublisher);
+            printf("%s。\n", SetBookPublisher(books, bookISBN, bookISBN));
+            getchar();
+            break;
+        case '8':
+            printf("输入图书编号：");
+            scanf("%s", bookISBN);
+            printf("%s。\n", DeleteBook(books, bookISBN));
+            getchar();
+            break;
         }
     }
+    SaveToFile(books, "Books Register Manage/Books.txt");
     return 0;
 }

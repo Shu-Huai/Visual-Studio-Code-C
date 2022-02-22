@@ -17,6 +17,7 @@
     "C_Cpp.clang_format_sortIncludes": true,
     "C_Cpp.errorSquiggles": "Enabled",
     "files.associations": {
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "stat.h": "c"
     },
 }

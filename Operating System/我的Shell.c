@@ -7,79 +7,33 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#define normal 0
-#define out_redirect 1
-#define in_redirect 2
-#define have_pipe 3
-void get_input(char *);
-void explain_input(char *buf, int *argcount, char arglist[100][256]);
-void do_cmd(int argcount, char arglist[100][256]);
-int find_command(char *command);
-int main(int argc, char **argu)
+#define OUTRED 1
+#define INRED 2
+#define HAVEPIPE 3
+void GetInput(char *buffer)
 {
-    int i;
-    int argcount = 8;
-    char arglist[100][256];
-    char **arg = NULL;
-    char **buf = NULL;
-    buf = (char *)malloc(256);
-    if (buf == NULL)
-    {
-        perror("malloc failed");
-        exit(-1);
-    }
-    while (1)
-    {
-        menset(buf, 8, 256);
-        printf("myshell");
-        get_input(buf);
-        if (strcmp(buf, "exit\n") == 0 || strcmp(buf, "logout\n") == 0)
-        {
-            break;
-        }
-        for (i = 0; i < 100; i++)
-        {
-            arglist[i][0] = '\0';
-        }
-        argcount = 0;
-        explain_input(buf, &argcount, arglist);
-        do_cmd(argcount, arglist);
-    }
-    if (buf != NULL)
-    {
-        free(buf);
-        buf = NULL;
-    }
-    exit(0);
-}
-void get_input(char *buf)
-{
-    int len = 0;
+    int length = 0;
     int ch = getchar();
-    while (len < 256 && ch != '\n')
+    while (length < 256 && ch != '\n')
     {
-        buf[len++] = ch;
+        buffer[length++] = ch;
         ch = getchar();
     }
-    if (len == 258)
+    if (length == 258)
     {
         printf("命令过长。\n");
         exit(-1);
     }
-    buf[len] = '\n';
-    buf[len + 1] = '\0';
+    buffer[length] = '\n';
+    buffer[length + 1] = '\0';
 }
-void explain_input(char *buf, int *argcount, char arglist[108][256])
+void Explain(char *buffer, int *argCount, char argList[100][256])
 {
-    char *p = buf;
-    char *q = buf;
+    char *p = buffer;
+    char *q = buffer;
     int number = 0;
-    while (1)
+    while (p[0] != '\n')
     {
-        if (p[0] == '\n')
-        {
-            break;
-        }
         if (p[0] == ' ')
         {
             p++;
@@ -93,14 +47,43 @@ void explain_input(char *buf, int *argcount, char arglist[108][256])
                 number++;
                 q++;
             }
-            strncpy(arglist[*argcount], p, number + 1);
-            arglist[*argcount][number] = '\0';
-            *argcount += 1;
+            strncpy(argList[*argCount], p, number + 1);
+            argList[*argCount][number] = '\0';
+            *argCount += 1;
             p = q;
         }
     }
 }
-void do_cmd(int argcount, char arglist[100][256])
+int FindCommand(char *command)
+{
+    DIR *dp;
+    struct dirent *drip;
+    char *path[] = {"./", "/bin", "/usr/bin", "/usr/local/bin", "/usr/local/sbin", "/usr/sbin", "/sbin", NULL};
+    if (strncmp(command, "/", 2) == 0)
+    {
+        command = command + 2;
+    }
+    int i = 0;
+    while (path[i])
+    {
+        if (!(dp = opendir(path[i])))
+        {
+            printf("路径错误。\n");
+        }
+        while (drip = readdir(dp))
+        {
+            if (!strcmp(drip->d_name, command))
+            {
+                closedir(dp);
+                return 1;
+            }
+        }
+        closedir(dp);
+        i++;
+    }
+    return 0;
+}
+void Execute(int argCount, char argList[100][256])
 {
     int flag = 0;
     int how = 0;
@@ -108,23 +91,23 @@ void do_cmd(int argcount, char arglist[100][256])
     int status = 0;
     int i;
     int fd;
-    char *arg[argcount + 1];
-    char *argnext[argcount + 1];
+    char *arg[argCount + 1];
+    char *argNext[argCount + 1];
     char *file;
     pid_t pid;
-    for (i = 0; i < argcount; i++)
+    for (i = 0; i < argCount; i++)
     {
-        arg[i] = (char *)arglist[i];
+        arg[i] = (char *)argList[i];
     }
-    arg[argcount] = NULL;
-    for (i = 0; i < argcount; i++)
+    arg[argCount] = NULL;
+    for (i = 0; i < argCount; i++)
     {
         if (strncmp(arg[i], "&", 1) == 0)
         {
-            if (i == argcount - 1)
+            if (i == argCount - 1)
             {
                 background = 1;
-                arg[argcount - 1] = NULL;
+                arg[argCount - 1] = NULL;
                 break;
             }
             else
@@ -134,13 +117,13 @@ void do_cmd(int argcount, char arglist[100][256])
             }
         }
     }
-    for (i = 0; arg[i] != NULL; i++)
+    for (i = 0; arg[i]; i++)
     {
         if (strcmp(arg[i], ">") == 0)
         {
             flag++;
-            how = out_redirect;
-            if (arg[i + 1] == NULL)
+            how = OUTRED;
+            if (!arg[i + 1])
             {
                 flag++;
             }
@@ -148,7 +131,7 @@ void do_cmd(int argcount, char arglist[100][256])
         if (strcmp(arg[i], "<") == 0)
         {
             flag++;
-            how = in_redirect;
+            how = INRED;
             if (i == 0)
             {
                 flag++;
@@ -157,8 +140,8 @@ void do_cmd(int argcount, char arglist[100][256])
         if (strcmp(arg[i], "|") == 0)
         {
             flag++;
-            how = have_pipe;
-            if (arg[i + 1] == NULL)
+            how = HAVEPIPE;
+            if (!arg[i + 1])
             {
                 flag++;
             }
@@ -173,9 +156,9 @@ void do_cmd(int argcount, char arglist[100][256])
         printf("指令错误。\n");
         return;
     }
-    if (how == out_redirect)
+    if (how == OUTRED)
     {
-        for (i = 0; arg[i] != NULL; i++)
+        for (i = 0; arg[i]; i++)
         {
             if (strcmp(arg[i], ">") == 0)
             {
@@ -184,9 +167,9 @@ void do_cmd(int argcount, char arglist[100][256])
             }
         }
     }
-    if (how == in_redirect)
+    if (how == INRED)
     {
-        for (i = 0; arg[i] != NULL; i++)
+        for (i = 0; arg[i]; i++)
         {
             if (strcmp(arg[i], "<") == 0)
             {
@@ -195,26 +178,26 @@ void do_cmd(int argcount, char arglist[100][256])
             }
         }
     }
-    if (how == have_pipe)
+    if (how == HAVEPIPE)
     {
-        for (i = 0; arg[i] != NULL; i++)
+        for (i = 0; arg[i]; i++)
         {
             if (strcmp(arg[i], "|") == 0)
             {
                 arg[i] = NULL;
                 int j = i + 1;
-                for (j = i + 1; arg[j] != NULL; j++)
+                for (j = i + 1; arg[j]; j++)
                 {
-                    argnext[j - i - 1] = arg[j];
+                    argNext[j - i - 1] = arg[j];
                 }
-                argnext[j - i - 1] = arg[j];
+                argNext[j - i - 1] = arg[j];
                 break;
             }
         }
     }
     if (pid = fork() < 0)
     {
-        printf("fork error");
+        printf("创建子进程失败。\n");
         return;
     }
     switch (how)
@@ -222,7 +205,7 @@ void do_cmd(int argcount, char arglist[100][256])
     case 0:
         if (pid == 0)
         {
-            if (!find_command(arg[0]))
+            if (!FindCommand(arg[0]))
             {
                 printf("没有这个命令。\n");
                 exit(0);
@@ -234,7 +217,7 @@ void do_cmd(int argcount, char arglist[100][256])
     case 1:
         if (pid == 0)
         {
-            if (!find_command(arg[0]))
+            if (!FindCommand(arg[0]))
             {
                 printf("没有这个命令。\n");
                 exit(0);
@@ -249,7 +232,7 @@ void do_cmd(int argcount, char arglist[100][256])
     case 2:
         if (pid == 0)
         {
-            if (!find_command(arg[0]))
+            if (!FindCommand(arg[0]))
             {
                 printf("没有这个命令。\n");
                 exit(0);
@@ -268,12 +251,12 @@ void do_cmd(int argcount, char arglist[100][256])
             int fd2;
             if (pid2 = fork() < 0)
             {
-                printf("fork error");
+                printf("创建子进程失败。\n");
                 return;
             }
             else if (pid2 == 0)
             {
-                if (!find_command(arg[0]))
+                if (!FindCommand(arg[0]))
                 {
                     printf("没有这个命令。\n");
                     exit(0);
@@ -285,19 +268,19 @@ void do_cmd(int argcount, char arglist[100][256])
             }
             if (waitpid(pid2, &status2, 0) < 0)
             {
-                printf("waitpid error");
+                printf("等待子进程失败。\n");
             }
-            if (!find_command(argnext[0]))
+            if (!FindCommand(argNext[0]))
             {
                 printf("没有这个命令。\n");
                 exit(0);
             }
             fd2 = open("/tmp/youdonotknowfile", O_RDONLY);
             dup2(fd2, 0);
-            execvp(argnext[0], argnext);
+            execvp(argNext[0], argNext);
             if (remove("/tmp/youdonotknowfile"))
             {
-                printf("remove error");
+                printf("等待子进程失败。\n");
             }
             exit(0);
         }
@@ -312,35 +295,43 @@ void do_cmd(int argcount, char arglist[100][256])
     }
     if (waitpid(pid, &status, 0) < 0)
     {
-        printf("waitpid error");
+        printf("等待错误。\n");
     }
 }
-int find_command(char *command)
+int main(int argc, char **argv)
 {
-    DIR *dp;
-    struct dirent *drip;
-    char *path[] = {"./", "/bin", "/usr/bin", "/usr/local/bin", "/usr/local/sbin", "/usr/sbin", "/sbin", NULL};
-    if (strncmp(command, "/", 2) == 0)
+    int argCount = 0;
+    char argList[100][256];
+    char **arg = NULL;
+    char *buffer = NULL;
+    buffer = (char *)malloc(256);
+    if (!buffer)
     {
-        command = command + 2;
+        perror("内存分配错误。");
+        exit(-1);
     }
-    int i = 0;
-    while (path[i] != NULL)
+    while (1)
     {
-        if ((dp = opendir(path[i])) == NULL)
+        memset(buffer, 0, 256);
+        printf("我的Shell：");
+        GetInput(buffer);
+        if (strcmp(buffer, "exit\n") == 0 || strcmp(buffer, "logout\n") == 0)
         {
-            printf("opendir error");
+            printf("再见。\n");
+            break;
         }
-        while ((drip = readdir(dp)) != NULL)
+        for (int i = 0; i < 100; i++)
         {
-            if (strcmp(drip->d_name, command) == 0)
-            {
-                closedir(dp);
-                return 1;
-            }
+            argList[i][0] = '\0';
         }
-        closedir(dp);
-        i++;
+        argCount = 0;
+        Explain(buffer, &argCount, argList);
+        Execute(argCount, argList);
     }
-    return 0;
+    if (buffer)
+    {
+        free(buffer);
+        buffer = NULL;
+    }
+    exit(0);
 }
